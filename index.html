@@ -3,179 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luau Forge Ultra | AI-Tracing & Resize</title>
+    <title>Image to UI Element</title>
     <style>
-        :root {
-            --bg: #08080a;
-            --glass: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent: #00e5ff;
-            --text: #ffffff;
-            --danger: #ff4d4d;
-        }
-
         body {
-            margin: 0; font-family: 'Inter', sans-serif;
-            background: var(--bg); color: var(--text);
-            height: 100vh; display: flex; overflow: hidden;
+            background: #0f172a;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
         }
 
-        .sidebar {
-            width: 340px; background: var(--glass); backdrop-filter: blur(25px);
-            border-right: 1px solid var(--glass-border); padding: 20px;
-            display: flex; flex-direction: column; gap: 15px; z-index: 100;
-            box-shadow: 10px 0 30px rgba(0,0,0,0.5); overflow-y: auto;
+        .upload-section {
+            margin-bottom: 50px;
+            padding: 20px;
+            border: 2px dashed #38bdf8;
+            border-radius: 15px;
+            text-align: center;
         }
 
-        h1 { font-size: 1.2rem; color: var(--accent); margin: 0; text-align: center; }
-
-        .canvas-area {
-            flex-grow: 1; position: relative;
-            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
-            background-size: 20px 20px;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain; /* Ovde ide uploadovana slika */
+        #file-input {
+            display: none;
         }
 
-        /* Moderni Elementi sa Resize */
-        .element {
-            position: absolute; background: rgba(0, 229, 255, 0.2);
-            border: 2px solid var(--accent); border-radius: 4px;
-            cursor: move; min-width: 40px; min-height: 40px;
-            display: flex; align-items: center; justify-content: center;
-            resize: both; overflow: auto; /* Omogućava nativno razvlačenje */
+        .upload-btn {
+            background: #38bdf8;
+            color: #0f172a;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
         }
 
-        .element span { pointer-events: none; font-weight: bold; font-size: 12px; }
-
-        .delete-btn {
-            position: absolute; top: -10px; right: -10px;
-            background: var(--danger); border: none; border-radius: 50%;
-            width: 20px; height: 20px; color: white; cursor: pointer;
-            font-size: 10px; display: none;
+        .upload-btn:hover {
+            background: #7dd3fc;
+            box-shadow: 0 0 15px #38bdf8;
         }
-        .element:hover .delete-btn { display: block; }
 
-        /* Controls */
-        .btn-main { background: var(--accent); color: #000; font-weight: bold; border: none; padding: 12px; border-radius: 8px; cursor: pointer; }
-        .upload-btn { background: #555; color: white; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px dashed #888; }
-        input[type="file"] { display: none; }
-        textarea { height: 150px; background: rgba(0,0,0,0.4); color: #00ffa2; border: 1px solid var(--glass-border); padding: 10px; font-family: monospace; font-size: 11px; }
-        label { font-size: 12px; opacity: 0.8; }
+        /* Kontejner gde će se stvarati elementi */
+        #container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        /* Stil za element koji se pravi od slike */
+        .glass-card {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .glass-card img {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(56, 189, 248, 0.5);
+        }
+
+        .glass-card h3 {
+            margin: 10px 0;
+            font-size: 1.2rem;
+            color: #38bdf8;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h1>LUA FORGE PRO 🛠️</h1>
-    
-    <label>1. Ubaci sliku (Shop/UI Screenshot)</label>
-    <label class="upload-btn">
-        📁 Odaberi Sliku
-        <input type="file" id="imageUpload" accept="image/*">
-    </label>
+    <div class="upload-section">
+        <h2>Ubaci sliku da generišeš element</h2>
+        <label for="file-input" class="upload-btn">Izaberi sliku</label>
+        <input type="file" id="file-input" accept="image/*">
+    </div>
 
-    <label>2. Naziv elementa (i Emoji)</label>
-    <input type="text" id="elName" value="Dugme 🔥" style="background:#222; color:white; border:none; padding:10px; border-radius:5px;">
+    <div id="container">
+        </div>
 
-    <button class="btn-main" onclick="createNewElement()">Dodaj Element preko slike</button>
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const container = document.getElementById('container');
 
-    <hr style="border: 0.5px solid var(--glass-border); width: 100%;">
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-    <label>Roblox Luau Code</label>
-    <textarea id="luaOutput" readonly></textarea>
-    <button onclick="copyCode()" style="background:transparent; color:var(--accent); border:1px solid var(--accent); padding:8px; border-radius:5px; cursor:pointer;">Kopiraj Kod</button>
-</div>
+            const reader = new FileReader();
 
-<div class="canvas-area" id="canvas"></div>
+            reader.onload = function(event) {
+                // Kreiranje strukture elementa
+                const card = document.createElement('div');
+                card.className = 'glass-card';
 
-<script>
-    const canvas = document.getElementById('canvas');
-    const imageUpload = document.getElementById('imageUpload');
-    const luaOutput = document.getElementById('luaOutput');
+                // Ime fajla bez ekstenzije za naslov
+                const fileName = file.name.split('.')[0];
 
-    // 1. Upload slike i postavljanje kao pozadinu
-    imageUpload.addEventListener('change', function(e) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            canvas.style.backgroundImage = `url(${event.target.result})`;
-            canvas.style.opacity = "0.8"; // Blago providno da lakše crtaš
-        }
-        reader.readAsDataURL(e.target.files[0]);
-    });
+                card.innerHTML = `
+                    <img src="${event.target.result}" alt="Uploaded image">
+                    <h3>${fileName}</h3>
+                    <p style="font-size: 0.8rem; color: #94a3b8;">Element kreiran automatski</p>
+                    <button style="background: transparent; border: 1px solid #38bdf8; color: #38bdf8; padding: 5px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px;">Opcije</button>
+                `;
 
-    // 2. Kreiranje elementa
-    function createNewElement() {
-        const name = document.getElementById('elName').value || "Frame";
-        const el = document.createElement('div');
-        el.className = 'element';
-        el.style.left = '50px';
-        el.style.top = '50px';
-        el.style.width = '120px';
-        el.style.height = '50px';
-        
-        el.innerHTML = `<span>${name}</span> <button class="delete-btn" onclick="this.parentElement.remove(); updateLua();">X</button>`;
-        
-        el.dataset.luaName = name.replace(/[^a-zA-Z0-9]/g, "_") + Math.floor(Math.random()*100);
-        el.dataset.text = name;
-
-        // Omogući pomeranje
-        makeDraggable(el);
-        
-        // Prati promenu veličine (ResizeObserver)
-        const ro = new ResizeObserver(() => updateLua());
-        ro.observe(el);
-
-        canvas.appendChild(el);
-        updateLua();
-    }
-
-    // 3. Dragging funkcija
-    function makeDraggable(el) {
-        let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
-        el.onmousedown = (e) => {
-            if (e.target.className === 'delete-btn' || e.offsetX > el.offsetWidth - 20) return; 
-            p3 = e.clientX; p4 = e.clientY;
-            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-            document.onmousemove = (e) => {
-                p1 = p3 - e.clientX; p2 = p4 - e.clientY;
-                p3 = e.clientX; p4 = e.clientY;
-                el.style.top = (el.offsetTop - p2) + "px";
-                el.style.left = (el.offsetLeft - p1) + "px";
-                updateLua();
+                // Dodavanje elementa u glavni kontejner
+                container.appendChild(card);
             };
-        };
-    }
 
-    // 4. Luau Code Generator
-    function updateLua() {
-        const elements = document.querySelectorAll('.element');
-        let code = "-- Generated by Luau Forge PRO\n";
-        code += "local ScreenGui = Instance.new('ScreenGui', game.Players.LocalPlayer.PlayerGui)\n\n";
-
-        elements.forEach(el => {
-            const name = el.dataset.luaName;
-            const text = el.dataset.text;
-            
-            code += `local ${name} = Instance.new('TextLabel')\n`;
-            code += `${name}.Name = "${name}"\n`;
-            code += `${name}.Text = "${text}"\n`;
-            code += `${name}.Size = UDim2.new(0, ${el.offsetWidth}, 0, ${el.offsetHeight})\n`;
-            code += `${name}.Position = UDim2.new(0, ${el.offsetLeft}, 0, ${el.offsetTop})\n`;
-            code += `${name}.BackgroundColor3 = Color3.fromRGB(0, 229, 255)\n`;
-            code += `${name}.BackgroundTransparency = 0.6\n`;
-            code += `${name}.Parent = ScreenGui\n\n`;
+            reader.readAsDataURL(file);
         });
-        luaOutput.value = code;
-    }
-
-    function copyCode() {
-        luaOutput.select();
-        document.execCommand('copy');
-        alert("Kod kopiran! Paste-uj ga u Roblox Script.");
-    }
-</script>
+    </script>
 
 </body>
 </html>
