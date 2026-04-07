@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luau UI Forge</title>
+    <style>
+        :root {
+            --bg: #0f0f12;
+            --panel: rgba(255, 255, 255, 0.05);
+            --accent: #00a2ff;
+            --text: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar / Glassmorphism */
+        .sidebar {
+            width: 300px;
+            background: var(--panel);
+            backdrop-filter: blur(15px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .canvas-area {
+            flex-grow: 1;
+            position: relative;
+            background-image: 
+                radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            overflow: hidden;
+        }
+
+        .element {
+            position: absolute;
+            background: rgba(0, 162, 255, 0.3);
+            border: 2px solid var(--accent);
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        h2 { font-size: 1.2rem; margin-bottom: 10px; color: var(--accent); }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #00ff88;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            padding: 10px;
+            resize: none;
+        }
+
+        .property-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label { font-size: 12px; opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Luau Designer</h2>
+    
+    <div class="property-group">
+        <label>Dodaj Element</label>
+        <button onclick="addElement()">+ New Frame</button>
+    </div>
+
+    <hr style="width:100%; border: 0.5px solid rgba(255,255,255,0.1)">
+
+    <div class="property-group">
+        <label>Generated Luau Code</label>
+        <textarea id="luaOutput" readonly>-- Kod će se pojaviti ovde...</textarea>
+        <button onclick="copyCode()" style="background: #333;">Copy Code</button>
+    </div>
+    
+    <p style="font-size: 10px; opacity: 0.5; margin-top: auto;">
+        Tip: Prevlači elemente po ekranu.
+    </p>
+</div>
+
+<div class="canvas-area" id="canvas">
+    </div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const luaOutput = document.getElementById('luaOutput');
+    let elementCount = 0;
+
+    function addElement() {
+        elementCount++;
+        const el = document.createElement('div');
+        el.className = 'element';
+        el.id = 'element-' + elementCount;
+        el.style.width = '150px';
+        el.style.height = '100px';
+        el.style.left = '50px';
+        el.style.top = '50px';
+        el.innerText = 'Frame_' + elementCount;
+
+        // Omogući Dragging
+        makeDraggable(el);
+        
+        canvas.appendChild(el);
+        updateLuaCode();
+    }
+
+    function makeDraggable(el) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        el.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            el.style.top = (el.offsetTop - pos2) + "px";
+            el.style.left = (el.offsetLeft - pos1) + "px";
+            updateLuaCode();
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    function updateLuaCode() {
+        const elements = document.querySelectorAll('.element');
+        let code = "-- Generated by Luau UI Forge\n\n";
+        code += "local ScreenGui = Instance.new('ScreenGui')\n";
+        code += "ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild('PlayerGui')\n\n";
+
+        elements.forEach(el => {
+            const name = el.innerText;
+            const w = parseInt(el.style.width);
+            const h = parseInt(el.style.height);
+            const x = parseInt(el.style.left);
+            const y = parseInt(el.style.top);
+
+            code += `-- [[ ${name} ]]\n`;
+            code += `local ${name} = Instance.new('Frame')\n`;
+            code += `${name}.Name = "${name}"\n`;
+            code += `${name}.Size = UDim2.new(0, ${w}, 0, ${h})\n`;
+            code += `${name}.Position = UDim2.new(0, ${x}, 0, ${y})\n`;
+            code += `${name}.BackgroundColor3 = Color3.fromRGB(0, 162, 255)\n`;
+            code += `${name}.Parent = ScreenGui\n\n`;
+        });
+
+        luaOutput.value = code;
+    }
+
+    function copyCode() {
+        luaOutput.select();
+        document.execCommand("copy");
+        alert("Kod kopiran!");
+    }
+</script>
+
+</body>
+</html>
